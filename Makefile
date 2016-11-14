@@ -1,3 +1,6 @@
+CC=gcc
+Cflags=-I/usr/include/fuse -pthread -lfuse -D_FILE_OFFSET_BITS=64 -Wall
 all: hello.c
-	gcc -Wall hello.c -D_FILE_OFFSET_BITS=64 -I/usr/include/fuse -pthread \
-	-lfuse -o hello
+	$(CC) hello.c $(Cflags) -o hello
+clean:
+	rm -rf hello
