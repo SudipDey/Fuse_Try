@@ -26,46 +26,43 @@ static char initial_working_dir[PATHLEN_MAX+1] = {'\0'};
 static char cached_mountpoint[PATHLEN_MAX+1] = {'\0'};
 static int mnt_fd;
 
-const char *full(const char *path) /* add mountpoint to path */;//shut up bogus gcc warnings
-const char *full(const char *path) /* add mountpoint to path */
+const char *
+get_real_mnt(const char *path)
 {
+	char *ep, *buff;
 
-// PROBLEMS:
-//   1) HEAP LEAKAGE
-//   2) <fixed>
-//   3) canonicalising the path (removing .. etc) - there's
-//      a call for it if I can just remember the name.
-//   4) what to do if malloc returns NULL - should we also 'umount'?
+	printf("%s Path send by Fuse is : %s\n", __func__, path);
+	buff = strdup(path+1);
+	if (buff == NULL)
+		exit(1);
 
-  char *ep, *buff;
+	ep = buff + strlen(buff) - 1;
+	if (*ep == '/')
+		*ep = '\0';
+	if (*buff == '\0')
+		strcpy(buff, ".");
 
-  buff = strdup(path+1); if (buff == NULL) exit(1);
-
-  ep = buff + strlen(buff) - 1; if (*ep == '/') *ep = '\0'; /* don't think this ever happens */
-
-  if (*buff == '\0') strcpy(buff, "."); /* (but this definitely does...) */
-
-  return buff;
+	return (buff);
 }
 
 static int __getattr(const char *path, struct stat *stbuf)
 {
-    int res;
+	int res;
 
-path = full(path);
-printf("fuse_: getattr(%s)\n", path);
-    res = lstat(path, stbuf);
-    if (res == -1)
-        return -errno;
+	path = get_real_mnt(path);
+	printf("fuse_: getattr(%s)\n", path);
+	res = lstat(path, stbuf);
+	if (res == -1)
+		return -errno;
 
-    return 0;
+	return 0;
 }
 
 static int __access(const char *path, int mask)
 {
     int res;
 
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: access(%s)\n", path);
     res = access(path, mask);
     if (res == -1)
@@ -78,7 +75,7 @@ static int __readlink(const char *path, char *buf, size_t size)
 {
     int res;
 
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: readlink(%s)\n", path);
     res = readlink(path, buf, size - 1);
     if (res == -1)
@@ -98,7 +95,7 @@ static int __readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     (void) offset;
     (void) fi;
 
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: readdir(%s)\n", path);
     dp = opendir(path);
     if (dp == NULL)
@@ -123,7 +120,7 @@ static int __mknod(const char *path, mode_t mode, dev_t rdev)
 
     /* On Linux this could just be 'mknod(path, mode, rdev)' but this
        is more portable */
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: mknod(%s)\n", path);
     if (S_ISREG(mode)) {
         res = open(path, O_CREAT | O_EXCL | O_WRONLY, mode);
@@ -143,7 +140,7 @@ static int __mkdir(const char *path, mode_t mode)
 {
     int res;
 
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: mkdir(%s)\n", path);
     res = mkdir(path, mode);
     if (res == -1)
@@ -156,7 +153,7 @@ static int __unlink(const char *path)
 {
     int res;
 
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: unlink(%s)\n", path);
     res = unlink(path);
     if (res == -1)
@@ -169,7 +166,7 @@ static int __rmdir(const char *path)
 {
     int res;
 
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: rmdir(%s)\n", path);
     res = rmdir(path);
     if (res == -1)
@@ -182,8 +179,8 @@ static int __symlink(const char *from, const char *to)
 {
     int res;
 
-from = full(from);
-to = full(to);
+from = get_real_mnt(from);
+to = get_real_mnt(to);
 printf("fuse_: symlink(%s, %s)\n", from, to);
     res = symlink(from, to);
     if (res == -1)
@@ -196,8 +193,8 @@ static int __rename(const char *from, const char *to)
 {
     int res;
 
-from = full(from);
-to = full(to);
+from = get_real_mnt(from);
+to = get_real_mnt(to);
 printf("fuse_: rename(%s, %s)\n", from, to);
     res = rename(from, to);
     if (res == -1)
@@ -210,8 +207,8 @@ static int __link(const char *from, const char *to)
 {
     int res;
 
-from = full(from);
-to = full(to);
+from = get_real_mnt(from);
+to = get_real_mnt(to);
 printf("fuse_: link(%s, %s)\n", from, to);
     res = link(from, to);
     if (res == -1)
@@ -224,7 +221,7 @@ static int __chmod(const char *path, mode_t mode)
 {
     int res;
 
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: chmod(%s)\n", path);
     res = chmod(path, mode);
     if (res == -1)
@@ -237,7 +234,7 @@ static int __chown(const char *path, uid_t uid, gid_t gid)
 {
     int res;
 
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: lchown(%s)\n", path);
     res = lchown(path, uid, gid);
     if (res == -1)
@@ -250,7 +247,7 @@ static int __truncate(const char *path, off_t size)
 {
     int res;
 
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: truncate(%s)\n", path);
     res = truncate(path, size);
     if (res == -1)
@@ -269,7 +266,7 @@ static int __utimens(const char *path, const struct timespec ts[2])
     tv[1].tv_sec = ts[1].tv_sec;
     tv[1].tv_usec = ts[1].tv_nsec / 1000;
 
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: utimes(%s)\n", path);
     res = utimes(path, tv);
     if (res == -1)
@@ -282,7 +279,7 @@ static int __open(const char *path, struct fuse_file_info *fi)
 {
     int res;
 
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: open(%s)\n", path);
     res = open(path, fi->flags);
     if (res == -1)
@@ -299,7 +296,7 @@ static int __read(const char *path, char *buf, size_t size, off_t offset,
     int res;
 
     (void) fi;
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: read(%s)\n", path);
     fd = open(path, O_RDONLY);
     if (fd == -1)
@@ -326,7 +323,7 @@ static int __write(const char *path, const char *buf, size_t size,
     int res;
 
     (void) fi;
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: write(%s)\n", path);
     fd = open(path, O_WRONLY);
     if (fd == -1)
@@ -344,7 +341,7 @@ static int __statfs(const char *path, struct statvfs *stbuf)
 {
     int res;
 
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: statvfs(%s)\n", path);
     res = statvfs(path, stbuf);
     if (res == -1)
@@ -363,7 +360,7 @@ static int __release(const char *path, struct fuse_file_info *fi)
 // OR look at fi->flags for write access, and assume if opened
 // for write, it will have been written to
 
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: release(%s) flags=%02x\n", path, fi->flags);
     if ((fi->flags&1) != 0) {
       printf("fuse_ TRIGGER: save file to /mnt/backup/%s\n", path);
@@ -379,7 +376,7 @@ static int __fsync(const char *path, int isdatasync,
     /* Just a stub.  This method is optional and can safely be left
        unimplemented */
 
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: fsync(%s)\n", path);
     (void) path;
     (void) isdatasync;
@@ -393,7 +390,7 @@ static int __setxattr(const char *path, const char *name, const char *value,
                         size_t size, int flags)
 {
     int res;
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: setxattr(%s)\n", path);
     res = lsetxattr(path, name, value, size, flags);
     if (res == -1)
@@ -406,7 +403,7 @@ static int __getxattr(const char *path, const char *name, char *value,
 {
     int res;
 
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: getxattr(%s)\n", path);
     res = lgetxattr(path, name, value, size);
     if (res == -1)
@@ -418,7 +415,7 @@ static int __listxattr(const char *path, char *list, size_t size)
 {
     int res;
 
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: listxattr(%s)\n", path);
     res = llistxattr(path, list, size);
     if (res == -1)
@@ -430,7 +427,7 @@ static int __removexattr(const char *path, const char *name)
 {
     int res;
 
-path = full(path);
+path = get_real_mnt(path);
 printf("fuse_: removexattr(%s)\n", path);
     res = lremovexattr(path, name);
     if (res == -1)
