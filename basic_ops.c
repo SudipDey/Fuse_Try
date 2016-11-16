@@ -84,11 +84,28 @@ __init(struct fuse_conn_info *ptr)
 		return (NULL);
 	return (ptr);
 }
+static int
+__write(const char *path, const char *buf, size_t size,
+		      off_t offset, struct fuse_file_info *fi)
+{
+	(void)buf;
+	(void)offset;
+	(void)fi;
+
+	if (strcmp(path, "/") != 0)
+		return -ENOENT;
+
+	return size;
+}
 
 static int
-__write(const char *path, char *buf, size_t size, off_t offset,
-		      struct fuse_file_info *fi)
+__truncate(const char *path, off_t size)
 {
+	(void)size;
+
+	if (strcmp(path, "/") != 0)
+		return -ENOENT;
+
 	return 0;
 }
 
@@ -99,6 +116,7 @@ static struct fuse_operations __oper = {
 	.open		= __open,
 	.read		= __read,
 	.write		= __write,
+	.truncate	= __truncate
 };
 
 int

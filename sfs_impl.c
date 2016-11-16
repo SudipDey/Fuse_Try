@@ -63,7 +63,7 @@ guaranteed to work on future Linux versions.
 
 #define PATHLEN_MAX 1024
 
-#include "debugf.c"
+// #include "debugf.c"
 
 //#include "cache.c"
 
@@ -98,7 +98,7 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
     int res;
 
 path = full(path);
-debugf("fusexmp: getattr(%s)\n", path);
+printf("fusexmp: getattr(%s)\n", path);
     res = lstat(path, stbuf);
     if (res == -1)
         return -errno;
@@ -111,7 +111,7 @@ static int xmp_access(const char *path, int mask)
     int res;
 
 path = full(path);
-debugf("fusexmp: access(%s)\n", path);
+printf("fusexmp: access(%s)\n", path);
     res = access(path, mask);
     if (res == -1)
         return -errno;
@@ -124,7 +124,7 @@ static int xmp_readlink(const char *path, char *buf, size_t size)
     int res;
 
 path = full(path);
-debugf("fusexmp: readlink(%s)\n", path);
+printf("fusexmp: readlink(%s)\n", path);
     res = readlink(path, buf, size - 1);
     if (res == -1)
         return -errno;
@@ -144,7 +144,7 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     (void) fi;
 
 path = full(path);
-debugf("fusexmp: readdir(%s)\n", path);
+printf("fusexmp: readdir(%s)\n", path);
     dp = opendir(path);
     if (dp == NULL)
         return -errno;
@@ -169,7 +169,7 @@ static int xmp_mknod(const char *path, mode_t mode, dev_t rdev)
     /* On Linux this could just be 'mknod(path, mode, rdev)' but this
        is more portable */
 path = full(path);
-debugf("fusexmp: mknod(%s)\n", path);
+printf("fusexmp: mknod(%s)\n", path);
     if (S_ISREG(mode)) {
         res = open(path, O_CREAT | O_EXCL | O_WRONLY, mode);
         if (res >= 0)
@@ -189,7 +189,7 @@ static int xmp_mkdir(const char *path, mode_t mode)
     int res;
 
 path = full(path);
-debugf("fusexmp: mkdir(%s)\n", path);
+printf("fusexmp: mkdir(%s)\n", path);
     res = mkdir(path, mode);
     if (res == -1)
         return -errno;
@@ -202,7 +202,7 @@ static int xmp_unlink(const char *path)
     int res;
 
 path = full(path);
-debugf("fusexmp: unlink(%s)\n", path);
+printf("fusexmp: unlink(%s)\n", path);
     res = unlink(path);
     if (res == -1)
         return -errno;
@@ -215,7 +215,7 @@ static int xmp_rmdir(const char *path)
     int res;
 
 path = full(path);
-debugf("fusexmp: rmdir(%s)\n", path);
+printf("fusexmp: rmdir(%s)\n", path);
     res = rmdir(path);
     if (res == -1)
         return -errno;
@@ -229,7 +229,7 @@ static int xmp_symlink(const char *from, const char *to)
 
 from = full(from);
 to = full(to);
-debugf("fusexmp: symlink(%s, %s)\n", from, to);
+printf("fusexmp: symlink(%s, %s)\n", from, to);
     res = symlink(from, to);
     if (res == -1)
         return -errno;
@@ -243,7 +243,7 @@ static int xmp_rename(const char *from, const char *to)
 
 from = full(from);
 to = full(to);
-debugf("fusexmp: rename(%s, %s)\n", from, to);
+printf("fusexmp: rename(%s, %s)\n", from, to);
     res = rename(from, to);
     if (res == -1)
         return -errno;
@@ -257,7 +257,7 @@ static int xmp_link(const char *from, const char *to)
 
 from = full(from);
 to = full(to);
-debugf("fusexmp: link(%s, %s)\n", from, to);
+printf("fusexmp: link(%s, %s)\n", from, to);
     res = link(from, to);
     if (res == -1)
         return -errno;
@@ -270,7 +270,7 @@ static int xmp_chmod(const char *path, mode_t mode)
     int res;
 
 path = full(path);
-debugf("fusexmp: chmod(%s)\n", path);
+printf("fusexmp: chmod(%s)\n", path);
     res = chmod(path, mode);
     if (res == -1)
         return -errno;
@@ -283,7 +283,7 @@ static int xmp_chown(const char *path, uid_t uid, gid_t gid)
     int res;
 
 path = full(path);
-debugf("fusexmp: lchown(%s)\n", path);
+printf("fusexmp: lchown(%s)\n", path);
     res = lchown(path, uid, gid);
     if (res == -1)
         return -errno;
@@ -296,7 +296,7 @@ static int xmp_truncate(const char *path, off_t size)
     int res;
 
 path = full(path);
-debugf("fusexmp: truncate(%s)\n", path);
+printf("fusexmp: truncate(%s)\n", path);
     res = truncate(path, size);
     if (res == -1)
         return -errno;
@@ -315,7 +315,7 @@ static int xmp_utimens(const char *path, const struct timespec ts[2])
     tv[1].tv_usec = ts[1].tv_nsec / 1000;
 
 path = full(path);
-debugf("fusexmp: utimes(%s)\n", path);
+printf("fusexmp: utimes(%s)\n", path);
     res = utimes(path, tv);
     if (res == -1)
         return -errno;
@@ -328,7 +328,7 @@ static int xmp_open(const char *path, struct fuse_file_info *fi)
     int res;
 
 path = full(path);
-debugf("fusexmp: open(%s)\n", path);
+printf("fusexmp: open(%s)\n", path);
     res = open(path, fi->flags);
     if (res == -1)
         return -errno;
@@ -345,7 +345,7 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 
     (void) fi;
 path = full(path);
-debugf("fusexmp: read(%s)\n", path);
+printf("fusexmp: read(%s)\n", path);
     fd = open(path, O_RDONLY);
     if (fd == -1)
         return -errno;
@@ -372,7 +372,7 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 
     (void) fi;
 path = full(path);
-debugf("fusexmp: write(%s)\n", path);
+printf("fusexmp: write(%s)\n", path);
     fd = open(path, O_WRONLY);
     if (fd == -1)
         return -errno;
@@ -390,7 +390,7 @@ static int xmp_statfs(const char *path, struct statvfs *stbuf)
     int res;
 
 path = full(path);
-debugf("fusexmp: statvfs(%s)\n", path);
+printf("fusexmp: statvfs(%s)\n", path);
     res = statvfs(path, stbuf);
     if (res == -1)
         return -errno;
@@ -409,9 +409,9 @@ static int xmp_release(const char *path, struct fuse_file_info *fi)
 // for write, it will have been written to
 
 path = full(path);
-debugf("fusexmp: release(%s) flags=%02x\n", path, fi->flags);
+printf("fusexmp: release(%s) flags=%02x\n", path, fi->flags);
     if ((fi->flags&1) != 0) {
-      debugf("fusexmp TRIGGER: save file to /mnt/backup/%s\n", path);
+      printf("fusexmp TRIGGER: save file to /mnt/backup/%s\n", path);
     }
     (void) path;
     (void) fi;
@@ -425,7 +425,7 @@ static int xmp_fsync(const char *path, int isdatasync,
        unimplemented */
 
 path = full(path);
-debugf("fusexmp: fsync(%s)\n", path);
+printf("fusexmp: fsync(%s)\n", path);
     (void) path;
     (void) isdatasync;
     (void) fi;
@@ -439,7 +439,7 @@ static int xmp_setxattr(const char *path, const char *name, const char *value,
 {
     int res;
 path = full(path);
-debugf("fusexmp: setxattr(%s)\n", path);
+printf("fusexmp: setxattr(%s)\n", path);
     res = lsetxattr(path, name, value, size, flags);
     if (res == -1)
         return -errno;
@@ -452,7 +452,7 @@ static int xmp_getxattr(const char *path, const char *name, char *value,
     int res;
 
 path = full(path);
-debugf("fusexmp: getxattr(%s)\n", path);
+printf("fusexmp: getxattr(%s)\n", path);
     res = lgetxattr(path, name, value, size);
     if (res == -1)
         return -errno;
@@ -464,7 +464,7 @@ static int xmp_listxattr(const char *path, char *list, size_t size)
     int res;
 
 path = full(path);
-debugf("fusexmp: listxattr(%s)\n", path);
+printf("fusexmp: listxattr(%s)\n", path);
     res = llistxattr(path, list, size);
     if (res == -1)
         return -errno;
@@ -476,7 +476,7 @@ static int xmp_removexattr(const char *path, const char *name)
     int res;
 
 path = full(path);
-debugf("fusexmp: removexattr(%s)\n", path);
+printf("fusexmp: removexattr(%s)\n", path);
     res = lremovexattr(path, name);
     if (res == -1)
         return -errno;
@@ -486,7 +486,7 @@ debugf("fusexmp: removexattr(%s)\n", path);
 
 static void *xmp_init(void)
 {
-  debugf("fusexmp: init()\n");
+  printf("fusexmp: init()\n");
   // trick to allow mounting as an overlay - doesn't work on freebsd
   fchdir(save_dir);
   close(save_dir);
@@ -530,19 +530,19 @@ int rc;
 
     umask(0);
     getcwd(initial_working_dir, PATHLEN_MAX);
-debugf("fusexmp: cwd=%s\n", initial_working_dir);
+printf("fusexmp: cwd=%s\n", initial_working_dir);
 
 //    cache_init();
 //    cache_save(initial_working_dir, 0);
 
-debugf("fusexmp: main(%s, %s, %s, %s)\n", argv[0], argv[1], argv[2], argv[3]);
+printf("fusexmp: main(%s, %s, %s, %s)\n", argv[0], argv[1], argv[2], argv[3]);
     strncpy(cached_mountpoint, argv[1], strlen(argv[1]));
-debugf("fusexmp: mountpoint=%s\n", cached_mountpoint);
+printf("fusexmp: mountpoint=%s\n", cached_mountpoint);
 
     save_dir = open(cached_mountpoint, O_RDONLY);
     rc = fuse_main(argc, argv, &xmp_oper, NULL);
 
-debugf("fusexmp: umount(%s, %s, %s, %s)\n", argv[0], argv[1], argv[2], argv[3]);
+printf("fusexmp: umount(%s, %s, %s, %s)\n", argv[0], argv[1], argv[2], argv[3]);
 
 //    cache_invalidate(initial_working_dir);
     return rc;
