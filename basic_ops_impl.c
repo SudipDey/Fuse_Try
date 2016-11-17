@@ -20,7 +20,7 @@
 #endif
 #include <unistd.h>
 #define PATHLEN_MAX 1024
-
+#include "basic_ops_impl.h"
 // #include "debugf.c"
 static char initial_working_dir[PATHLEN_MAX+1] = {'\0'};
 static char cached_mountpoint[PATHLEN_MAX+1] = {'\0'};
@@ -54,7 +54,7 @@ static int __getattr(const char *path, struct stat *stbuf)
 	res = lstat(path, stbuf);
 	if (res == -1)
 		return -errno;
-
+	do_file_ops_accounting();
 	return 0;
 }
 
