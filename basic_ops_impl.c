@@ -47,12 +47,12 @@ get_real_mnt(const char *path)
 
 static int __getattr(const char *path, struct stat *stbuf)
 {
-	int res;
+	int ret;
 
 	path = get_real_mnt(path);
 	printf("fuse_: getattr(%s)\n", path);
-	res = lstat(path, stbuf);
-	if (res == -1)
+	ret = lstat(path, stbuf);
+	if (ret == -1)
 		return -errno;
 	do_file_ops_accounting();
 	return 0;
@@ -60,171 +60,173 @@ static int __getattr(const char *path, struct stat *stbuf)
 
 static int __access(const char *path, int mask)
 {
-    int res;
+	int ret;
 
-path = get_real_mnt(path);
-printf("fuse_: access(%s)\n", path);
-    res = access(path, mask);
-    if (res == -1)
-        return -errno;
+	path = get_real_mnt(path);
+	printf("fuse_: access(%s)\n", path);
+	ret = access(path, mask);
+	if (ret == -1)
+		return (-errno);
 
-    return 0;
+	do_file_ops_accounting();
+
+	return (0);
 }
 
 static int __readlink(const char *path, char *buf, size_t size)
 {
-    int res;
+	int ret;
 
-path = get_real_mnt(path);
-printf("fuse_: readlink(%s)\n", path);
-    res = readlink(path, buf, size - 1);
-    if (res == -1)
-        return -errno;
+	path = get_real_mnt(path);
+	printf("fuse_: readlink(%s)\n", path);
+	ret = readlink(path, buf, size - 1);
+	if (ret == -1)
+		return -errno;
+	buf[ret] = '\0';
+	do_file_ops_accounting();
 
-    buf[res] = '\0';
-    return 0;
+	return (0);
 }
 
 
 static int __readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                        off_t offset, struct fuse_file_info *fi)
 {
-    DIR *dp;
-    struct dirent *de;
+	DIR *dp;
+	struct dirent *di;
+	struct stat st;
+	int ret = 0;
 
-    (void) offset;
-    (void) fi;
+	(void) offset;
+	(void) fi;
 
-path = get_real_mnt(path);
-printf("fuse_: readdir(%s)\n", path);
-    dp = opendir(path);
-    if (dp == NULL)
-        return -errno;
+	path = get_real_mnt(path);
+	printf("fuse_: readdir(%s)\n", path);
+	dp = opendir(path);
+	if (!dp)
+		return -errno;
 
-    while ((de = readdir(dp)) != NULL) {
-        struct stat st;
-        memset(&st, 0, sizeof(st));
-        st.st_ino = de->d_ino;
-        st.st_mode = de->d_type << 12;
-        if (filler(buf, de->d_name, &st, 0))
-            break;
-    }
+	while (di = readdir(dp)) {
+		memset(&st, 0, sizeof(st));
+		if(stat(di->d_name, &st))
+			return (-errno);
+		if (filler(buf, di->d_name, &st, 0))
+	    		break;
+	}
 
-    closedir(dp);
-    return 0;
+	closedir(dp);
+	return 0;
 }
 
 static int __mknod(const char *path, mode_t mode, dev_t rdev)
 {
-    int res;
+	int ret;
 
-    /* On Linux this could just be 'mknod(path, mode, rdev)' but this
-       is more portable */
-path = get_real_mnt(path);
-printf("fuse_: mknod(%s)\n", path);
-    if (S_ISREG(mode)) {
-        res = open(path, O_CREAT | O_EXCL | O_WRONLY, mode);
-        if (res >= 0)
-            res = close(res);
-    } else if (S_ISFIFO(mode))
-        res = mkfifo(path, mode);
-    else
-        res = mknod(path, mode, rdev);
-    if (res == -1)
-        return -errno;
+	path = get_real_mnt(path);
+	printf("fuse_: mknod(%s)\n", path);
+	if (S_ISREG(mode)) {
+		ret = open(path, O_CREAT | O_EXCL | O_WRONLY, mode);
+		if (ret >= 0)
+	    		ret = close(ret);
+	} else if (S_ISFIFO(mode)) {
+		ret = mkfifo(path, mode);
+	} else {
+		ret = mknod(path, mode, rdev);
+	}
+	if (ret == -1)
+		return (-errno);
 
-    return 0;
+	return (0);
 }
 
 static int __mkdir(const char *path, mode_t mode)
 {
-    int res;
+	int ret;
 
-path = get_real_mnt(path);
-printf("fuse_: mkdir(%s)\n", path);
-    res = mkdir(path, mode);
-    if (res == -1)
-        return -errno;
+	path = get_real_mnt(path);
+	printf("fuse_: mkdir(%s)\n", path);
+	ret = mkdir(path, mode);
+	if (ret)
+		return (-errno);
 
-    return 0;
+	return (0);
 }
 
 static int __unlink(const char *path)
 {
-    int res;
+	int ret;
 
-path = get_real_mnt(path);
-printf("fuse_: unlink(%s)\n", path);
-    res = unlink(path);
-    if (res == -1)
-        return -errno;
+	path = get_real_mnt(path);
+	printf("fuse_: unlink(%s)\n", path);
+	ret = unlink(path);
+	if (ret)
+		return (-errno);
 
-    return 0;
+	return (0);
 }
 
 static int __rmdir(const char *path)
 {
-    int res;
+	int ret;
 
-path = get_real_mnt(path);
-printf("fuse_: rmdir(%s)\n", path);
-    res = rmdir(path);
-    if (res == -1)
-        return -errno;
+	path = get_real_mnt(path);
+	printf("fuse_: rmdir(%s)\n", path);
+	ret = rmdir(path);
+	if (ret)
+		return (errno);
 
-    return 0;
+	return (0);
 }
 
 static int __symlink(const char *from, const char *to)
 {
-    int res;
+	int ret;
 
-from = get_real_mnt(from);
-to = get_real_mnt(to);
-printf("fuse_: symlink(%s, %s)\n", from, to);
-    res = symlink(from, to);
-    if (res == -1)
-        return -errno;
-
-    return 0;
+	from = get_real_mnt(from);
+	to = get_real_mnt(to);
+	printf("fuse_: symlink(%s, %s)\n", from, to);
+	ret = symlink(from, to);
+	if (ret)
+		return (-errno);
+	return 0;
 }
 
 static int __rename(const char *from, const char *to)
 {
-    int res;
+	int ret;
 
-from = get_real_mnt(from);
-to = get_real_mnt(to);
-printf("fuse_: rename(%s, %s)\n", from, to);
-    res = rename(from, to);
-    if (res == -1)
-        return -errno;
+	from = get_real_mnt(from);
+	to = get_real_mnt(to);
+	printf("fuse_: rename(%s, %s)\n", from, to);
+	ret = rename(from, to);
+	if (ret)
+		return (-errno);
 
-    return 0;
+	return (0);
 }
 
 static int __link(const char *from, const char *to)
 {
-    int res;
+	int ret;
 
-from = get_real_mnt(from);
-to = get_real_mnt(to);
-printf("fuse_: link(%s, %s)\n", from, to);
-    res = link(from, to);
-    if (res == -1)
-        return -errno;
+	from = get_real_mnt(from);
+	to = get_real_mnt(to);
+	printf("fuse_: link(%s, %s)\n", from, to);
+	ret = link(from, to);
+	if (ret)
+		return (-errno);
 
-    return 0;
+	return (0);
 }
 
 static int __chmod(const char *path, mode_t mode)
 {
-    int res;
+    int ret;
 
 path = get_real_mnt(path);
 printf("fuse_: chmod(%s)\n", path);
-    res = chmod(path, mode);
-    if (res == -1)
+    ret = chmod(path, mode);
+    if (ret == -1)
         return -errno;
 
     return 0;
@@ -232,12 +234,12 @@ printf("fuse_: chmod(%s)\n", path);
 
 static int __chown(const char *path, uid_t uid, gid_t gid)
 {
-    int res;
+    int ret;
 
 path = get_real_mnt(path);
 printf("fuse_: lchown(%s)\n", path);
-    res = lchown(path, uid, gid);
-    if (res == -1)
+    ret = lchown(path, uid, gid);
+    if (ret == -1)
         return -errno;
 
     return 0;
@@ -245,12 +247,12 @@ printf("fuse_: lchown(%s)\n", path);
 
 static int __truncate(const char *path, off_t size)
 {
-    int res;
+    int ret;
 
 path = get_real_mnt(path);
 printf("fuse_: truncate(%s)\n", path);
-    res = truncate(path, size);
-    if (res == -1)
+    ret = truncate(path, size);
+    if (ret == -1)
         return -errno;
 
     return 0;
@@ -258,7 +260,7 @@ printf("fuse_: truncate(%s)\n", path);
 
 static int __utimens(const char *path, const struct timespec ts[2])
 {
-    int res;
+    int ret;
     struct timeval tv[2];
 
     tv[0].tv_sec = ts[0].tv_sec;
@@ -268,8 +270,8 @@ static int __utimens(const char *path, const struct timespec ts[2])
 
 path = get_real_mnt(path);
 printf("fuse_: utimes(%s)\n", path);
-    res = utimes(path, tv);
-    if (res == -1)
+    ret = utimes(path, tv);
+    if (ret == -1)
         return -errno;
 
     return 0;
@@ -277,15 +279,15 @@ printf("fuse_: utimes(%s)\n", path);
 
 static int __open(const char *path, struct fuse_file_info *fi)
 {
-    int res;
+    int ret;
 
 path = get_real_mnt(path);
 printf("fuse_: open(%s)\n", path);
-    res = open(path, fi->flags);
-    if (res == -1)
+    ret = open(path, fi->flags);
+    if (ret == -1)
         return -errno;
 
-    close(res);
+    close(ret);
     return 0;
 }
 
@@ -293,7 +295,7 @@ static int __read(const char *path, char *buf, size_t size, off_t offset,
                     struct fuse_file_info *fi)
 {
     int fd;
-    int res;
+    int ret;
 
     (void) fi;
 path = get_real_mnt(path);
@@ -302,12 +304,12 @@ printf("fuse_: read(%s)\n", path);
     if (fd == -1)
         return -errno;
 
-    res = pread(fd, buf, size, offset);
-    if (res == -1)
-        res = -errno;
+    ret = pread(fd, buf, size, offset);
+    if (ret == -1)
+        ret = -errno;
 
     close(fd);
-    return res;
+    return ret;
 }
 
 static int __write(const char *path, const char *buf, size_t size,
@@ -320,7 +322,7 @@ static int __write(const char *path, const char *buf, size_t size,
 // copy when we get the 'release' call.
 
     int fd;
-    int res;
+    int ret;
 
     (void) fi;
 path = get_real_mnt(path);
@@ -329,22 +331,22 @@ printf("fuse_: write(%s)\n", path);
     if (fd == -1)
         return -errno;
 
-    res = pwrite(fd, buf, size, offset);
-    if (res == -1)
-        res = -errno;
+    ret = pwrite(fd, buf, size, offset);
+    if (ret == -1)
+        ret = -errno;
 
     close(fd);
-    return res;
+    return ret;
 }
 
 static int __statfs(const char *path, struct statvfs *stbuf)
 {
-    int res;
+    int ret;
 
 path = get_real_mnt(path);
 printf("fuse_: statvfs(%s)\n", path);
-    res = statvfs(path, stbuf);
-    if (res == -1)
+    ret = statvfs(path, stbuf);
+    if (ret == -1)
         return -errno;
 
     return 0;
@@ -389,11 +391,11 @@ printf("fuse_: fsync(%s)\n", path);
 static int __setxattr(const char *path, const char *name, const char *value,
                         size_t size, int flags)
 {
-    int res;
+    int ret;
 path = get_real_mnt(path);
 printf("fuse_: setxattr(%s)\n", path);
-    res = lsetxattr(path, name, value, size, flags);
-    if (res == -1)
+    ret = lsetxattr(path, name, value, size, flags);
+    if (ret == -1)
         return -errno;
     return 0;
 }
@@ -401,36 +403,36 @@ printf("fuse_: setxattr(%s)\n", path);
 static int __getxattr(const char *path, const char *name, char *value,
                     size_t size)
 {
-    int res;
+    int ret;
 
 path = get_real_mnt(path);
 printf("fuse_: getxattr(%s)\n", path);
-    res = lgetxattr(path, name, value, size);
-    if (res == -1)
+    ret = lgetxattr(path, name, value, size);
+    if (ret == -1)
         return -errno;
-    return res;
+    return ret;
 }
 
 static int __listxattr(const char *path, char *list, size_t size)
 {
-    int res;
+    int ret;
 
 path = get_real_mnt(path);
 printf("fuse_: listxattr(%s)\n", path);
-    res = llistxattr(path, list, size);
-    if (res == -1)
+    ret = llistxattr(path, list, size);
+    if (ret == -1)
         return -errno;
-    return res;
+    return ret;
 }
 
 static int __removexattr(const char *path, const char *name)
 {
-    int res;
+    int ret;
 
 path = get_real_mnt(path);
 printf("fuse_: removexattr(%s)\n", path);
-    res = lremovexattr(path, name);
-    if (res == -1)
+    ret = lremovexattr(path, name);
+    if (ret == -1)
         return -errno;
     return 0;
 }
