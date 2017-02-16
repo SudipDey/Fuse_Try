@@ -8,5 +8,8 @@
 int
 do_file_ops_accounting(void)
 {
+	// from here use mysql plugin push it
+	// in database instead of writting own
+	// database
 	return (0);
 }
